@@ -1,4 +1,4 @@
-package org.dep.imeiRegistory.dto;
+package org.dep.imeiregistry.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,8 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RowResult {
+public class RegistryBatchItem {
+
     private int rowNumber;
-    private String status;
-    private String reason;
+    private ImeiRequest record;
 }

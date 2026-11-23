@@ -1,4 +1,4 @@
-package org.dep.imeiRegistory.model;
+package org.dep.imeiregistry.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -6,22 +6,21 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Getter @Setter
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-//this setups table name and constraints
 @Table(
         name = "imei_records",
         uniqueConstraints = {
-                @UniqueConstraint(name = "imei_number", columnNames = "imei_number")
+                @UniqueConstraint(name = "uk_imei_number", columnNames = "imei_number")
         }
 )
-public class Imei{
+public class Imei {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    //primary key
     private Long id;
 
     @Column(name = "imei_number", length = 15, nullable = false, unique = true)
@@ -40,22 +39,17 @@ public class Imei{
     private String status;
 
     @Column(name = "last_action", length = 20)
-    //last action performed
     private String lastAction;
 
     @Column(name = "last_updated")
-    //timestamp for last updated
     private LocalDateTime lastUpdated;
 
     @Column(name = "created_at")
-    //timestamp for creation
     private LocalDateTime createdAt;
 
-    //trying gpt method
     @PrePersist
     protected void onCreate() {
         LocalDateTime now = LocalDateTime.now();
-
         createdAt = now;
         lastUpdated = now;
     }

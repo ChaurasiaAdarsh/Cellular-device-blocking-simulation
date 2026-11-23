@@ -1,4 +1,4 @@
-package org.dep.imeiRegistory.exception;
+package org.dep.imeiregistry.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,17 +10,12 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import java.util.HashMap;
 import java.util.Map;
 
-
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Handle IMEI not found
     @ExceptionHandler(ImeiNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleImeiNotFound(
-            ImeiNotFoundException ex) {
-
+    public ResponseEntity<Map<String, Object>> handleImeiNotFound(ImeiNotFoundException ex) {
         Map<String, Object> error = new HashMap<>();
-
         error.put("status", 404);
         error.put("error", "IMEI Not Found");
         error.put("message", ex.getMessage());
@@ -30,38 +25,30 @@ public class GlobalExceptionHandler {
                 .body(error);
     }
 
-    //handle Invalid Imei Number
     @ExceptionHandler(InvalidImeiException.class)
-    public ResponseEntity<Map<String, Object>> invalidImei(
-            InvalidImeiException ex) {
-
+    public ResponseEntity<Map<String, Object>> handleInvalidImei(InvalidImeiException ex) {
         Map<String, Object> error = new HashMap<>();
-
-        error.put("status", 404);
-        error.put("error", "IMEI Not Found");
+        error.put("status", 400);
+        error.put("error", "Invalid IMEI");
         error.put("message", ex.getMessage());
 
         return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
+                .status(HttpStatus.BAD_REQUEST)
                 .body(error);
     }
 
-    // Handle validation errors
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationErrors(
             MethodArgumentNotValidException ex) {
         Map<String, Object> error = new HashMap<>();
-
         Map<String, String> fieldErrors = new HashMap<>();
 
         ex.getBindingResult()
                 .getFieldErrors()
-                .forEach(fieldError ->
-                       fieldErrors.put(
-                                fieldError.getField(),
-                                fieldError.getDefaultMessage()
-                        )
-                );
+                .forEach(fieldError -> fieldErrors.put(
+                        fieldError.getField(),
+                        fieldError.getDefaultMessage()
+                ));
 
         error.put("status", 400);
         error.put("error", "Validation Failed");
@@ -72,35 +59,32 @@ public class GlobalExceptionHandler {
                 .body(error);
     }
 
-
-    // Handle all other exceptions
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleAllExceptions(
-            Exception ex) {
-
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleHandlerMethodValidationException(
+            HandlerMethodValidationException ex) {
         Map<String, Object> error = new HashMap<>();
-        System.out.println(ex.getClass().getName());
 
-        error.put("status", 500);
-        error.put("error", ex.getMessage());
-        error.put("message", "Something went wrong");
+        String message = ex.getAllErrors().stream()
+                .map(err -> err.getDefaultMessage())
+                .filter(msg -> msg != null)
+                .findFirst()
+                .orElse("Validation failed");
+
+        error.put("status", 400);
+        error.put("error", "Bad Request");
+        error.put("message", message);
 
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .status(HttpStatus.BAD_REQUEST)
                 .body(error);
     }
 
-
-    @ExceptionHandler(HandlerMethodValidationException.class)
-    public ResponseEntity<Map<String, Object>> handleAllHandlerMethodValidationException(
-            HandlerMethodValidationException ex) {
-
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleAllExceptions(Exception ex) {
         Map<String, Object> error = new HashMap<>();
-        System.out.println(ex.getClass().getName());
-        String message = ex.getAllErrors() .stream() .map(err -> err.getDefaultMessage()) .filter(msg -> msg != null) .findFirst() .orElse("Validation failed");
         error.put("status", 500);
-        error.put("error", message);
-        error.put("message", "Invalid Imei number");
+        error.put("error", "Internal Server Error");
+        error.put("message", ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred");
 
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)

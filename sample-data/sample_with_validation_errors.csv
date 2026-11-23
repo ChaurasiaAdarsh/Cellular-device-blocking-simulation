@@ -1,0 +1,7 @@
+userName,mobileModel,imeiNumber,telecomCompany,action
+Valid User,Galaxy S24,356938035643801,AeroTel 5G,BLOCK
+Short IMEI,iPhone 15,1234567890,NovaCom,BLOCK
+Blank Model,,356938035643803,Vertex Telecom,BLOCK
+Invalid Action,Pixel 8,862415049381200,AeroTel 5G,SUSPEND
+Missing Telecom,OnePlus 12,990012345678902,,UNBLOCK
+Valid Second,Xiaomi 14,357891024681399,NovaCom,UNBLOCK

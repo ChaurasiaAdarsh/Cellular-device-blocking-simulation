@@ -31,7 +31,10 @@ public class FileController {
     @Value("${registry.batch-size:10}")
     private int batchSize;
 
-    public FileController(FileParser fileParser,DataValidator dataValidator,RegistryClient registryClient,ExecutorService registryExecutorService) {
+    public FileController(FileParser fileParser,
+                          DataValidator dataValidator,
+                          RegistryClient registryClient,
+                          ExecutorService registryExecutorService) {
         this.fileParser = fileParser;
         this.dataValidator = dataValidator;
         this.registryClient = registryClient;
@@ -42,48 +45,43 @@ public class FileController {
     public CompletableFuture<ResponseEntity<BatchResultDTO>> uploadFile(
             @RequestParam("file") MultipartFile file) {
 
-        //  Parse file
-        List<FileRecordDTO> records =fileParser.parse(file);
+        // Parse file rows
+        List<FileRecordDTO> records = fileParser.parse(file);
         List<RegistryBatchItem> validRecords = new ArrayList<>();
         List<RowResult> results = new ArrayList<>();
 
-        //  Validate every row
+        // Validate each row
         for (int i = 0; i < records.size(); i++) {
-
             FileRecordDTO record = records.get(i);
-            // skips the 1st row that is header
+            // Row numbers start at 2 (accounting for 1-based indexing and header row)
             int rowNumber = i + 2;
             Optional<String> validationError = dataValidator.validate(record, rowNumber);
 
             if (validationError.isPresent()) {
                 results.add(RowResult.builder()
-                                .rowNumber(rowNumber)
-                                .status("FAILED")
-                                .reason(validationError.get())
-                                .build());
-
+                        .rowNumber(rowNumber)
+                        .status("FAILED")
+                        .reason(validationError.get())
+                        .build());
             } else {
-
                 validRecords.add(new RegistryBatchItem(rowNumber, record));
             }
         }
 
-        //  Split valid records into batches
+        // Split valid records into chunks for batch processing
         List<List<RegistryBatchItem>> batches = createBatches(validRecords, batchSize);
 
-        //  Create CompletableFuture for each BATCH
+        // Execute batch dispatch asynchronously
         List<CompletableFuture<List<RowResult>>> futures = new ArrayList<>();
 
         for (List<RegistryBatchItem> batch : batches) {
-
             CompletableFuture<List<RowResult>> future =
-                    CompletableFuture.supplyAsync(() -> registryClient.sendBatch(batch),registryExecutorService)
+                    CompletableFuture.supplyAsync(() -> registryClient.sendBatch(batch), registryExecutorService)
                             .exceptionally(ex -> {
                                 List<RowResult> failedResults = new ArrayList<>();
-
                                 for (RegistryBatchItem item : batch) {
                                     failedResults.add(
-                                            new RowResult(item.getRowNumber(),"FAILED","Registry service error: "+ ex.getMessage() )
+                                            new RowResult(item.getRowNumber(), "FAILED", "Registry service error: " + ex.getMessage())
                                     );
                                 }
                                 return failedResults;
@@ -92,36 +90,33 @@ public class FileController {
             futures.add(future);
         }
 
-        //  Wait for all batches
-        CompletableFuture<Void> allBatches =CompletableFuture.allOf(
+        // Wait for all batch tasks to complete and aggregate results
+        CompletableFuture<Void> allBatches = CompletableFuture.allOf(
                 futures.toArray(new CompletableFuture[0]));
 
-        //  Combine results
         return allBatches.thenApply(v -> {
-            for (CompletableFuture<List<RowResult>> future: futures) {
+            for (CompletableFuture<List<RowResult>> future : futures) {
                 results.addAll(future.join());
             }
 
             int failureCount = (int) results.stream()
-                    .filter(result ->"FAILED".equals(result.getStatus()))
+                    .filter(result -> "FAILED".equals(result.getStatus()))
                     .count();
 
-            int successCount =
-                    records.size() - failureCount;
+            int successCount = records.size() - failureCount;
 
-            BatchResultDTO result =
-                    BatchResultDTO.builder()
-                            .totalRows(records.size())
-                            .successCount(successCount)
-                            .failureCount(failureCount)
-                            .results(results)
-                            .build();
+            BatchResultDTO result = BatchResultDTO.builder()
+                    .totalRows(records.size())
+                    .successCount(successCount)
+                    .failureCount(failureCount)
+                    .results(results)
+                    .build();
 
             return ResponseEntity.ok(result);
         });
     }
 
-    private List<List<RegistryBatchItem>> createBatches(List<RegistryBatchItem> records,int batchSize) {
+    private List<List<RegistryBatchItem>> createBatches(List<RegistryBatchItem> records, int batchSize) {
         List<List<RegistryBatchItem>> batches = new ArrayList<>();
         for (int i = 0; i < records.size(); i += batchSize) {
             int end = Math.min(i + batchSize, records.size());

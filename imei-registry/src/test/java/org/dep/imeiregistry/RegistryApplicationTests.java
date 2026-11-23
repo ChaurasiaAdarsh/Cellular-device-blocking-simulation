@@ -1,13 +1,12 @@
-package org.dep.imeiRegistory;
+package org.dep.imeiregistry;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class TestingApplicationTests {
+class RegistryApplicationTests {
 
     @Test
     void contextLoads() {
     }
-
 }

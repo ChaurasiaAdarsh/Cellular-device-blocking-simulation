@@ -1,101 +1,216 @@
-# IMEI Block and Unblock (Simulation)
+# Mobile Device IMEI Blocking & Unblocking Simulation
 
-A local demo of blocking and unblocking a 4G or 5G phone by its IMEI. It was built to understand that workflow before working on the real company system.
+An architectural simulation and demonstration platform for mobile device IMEI lifecycle management (Blocking and Unblocking) across 4G and 5G cellular network concepts.
 
-This project does not talk to a mobile network, a carrier, or a physical phone. A block or unblock only changes a record in an in-memory database. Restarting the registry clears every record.
+> **Note:** This project is an independent educational simulation and proof-of-concept created solely for learning and exploring systems architecture. It does not interface with live telecommunications carriers, cellular core networks (EIR/HSS/UDM), or physical radio devices. All device states are simulated in an in-memory datastore.
 
-## How the pieces fit
+---
 
-```text
-imei-status-app  →  file-ingestion  →  imei-registry
-   (browser)         (CSV upload)       (IMEI records)
+## 1. System Overview & Architecture
+
+In mobile telecommunications networks, an **IMEI (International Mobile Equipment Identity)** is a unique 15-digit identifier allocated to mobile equipment. Equipment Identity Registers (EIR) maintain lists (white, grey, black) to permit or deny network access (e.g., when a device is reported lost or stolen).
+
+This simulation models the end-to-end workflow:
+1. **Interactive Device Lookup & Toggle**: Real-time querying and immediate status switching for individual devices.
+2. **Bulk File Ingestion**: Uploading structured CSV files, performing row-level validation, chunking records into batches, and asynchronously applying status updates.
+3. **Registry Store**: Central in-memory registry maintaining device records and transaction audit timestamps.
+
+### System Diagram
+
+```
++--------------------------------------------------------+
+|             imei-status-app (React + Vite)             |
+|  - Device Lookup & Status Toggle                       |
+|  - Batch CSV Upload with Live Result Table             |
++---------------------------+----------------------------+
+                            |
+             +--------------+--------------+
+             |                             |
+      Direct Lookup / Update         CSV Upload File
+             |                             |
+             v                             v
++--------------------------+  +--------------------------+
+|      imei-registry       |  |      file-ingestion      |
+|  (Spring Boot :8080)     |  |  (Spring Boot :8081)     |
+|  - RESTful Endpoints     |  |  - CSV Parser & Validator|
+|  - In-Memory H2 DB       |<----+ Async Batch Chunks    |
+|  - Audit Timestamps      |  |  - Result Aggregator     |
++--------------------------+  +--------------------------+
 ```
 
-| Folder | What it does | Address |
-| --- | --- | --- |
-| `imei-registry` | Stores each IMEI and its status (`Blocked` or `Unblocked`) | http://localhost:8080 |
-| `file-ingestion` | Reads a CSV, checks each row, and sends batches to the registry | http://localhost:8081 |
-| `imei-status-app` | Lookup page and CSV upload page | http://localhost:5173 |
+---
 
-## Requirements
+## 2. Project Modules
 
-- Java 21
-- Maven (or the `mvnw` wrapper in each Java module)
-- Node.js 18 or newer
+| Directory | Technology | Default Port | Description |
+| :--- | :--- | :--- | :--- |
+| `imei-registry` | Java 21, Spring Boot 4, Spring Data JPA, H2 | `8080` | Stores simulated device status (`Blocked` / `Unblocked`), history, and batch operations. |
+| `file-ingestion` | Java 21, Spring Boot 4, CompletableFuture | `8081` | Ingests CSV files, validates format and IMEI constraints, and streams batch chunks to the registry. |
+| `imei-status-app` | React 18, Vite 6, Tailwind CSS, Lucide | `5173` | Modern web interface for checking device state and uploading batch spreadsheets. |
+| `sample-data` | CSV | N/A | Ready-to-use sample CSV files for testing valid ingestions and error scenarios. |
 
-## Run it
+---
 
-Start the registry first, then file ingestion, then the UI. Use a separate terminal for each.
+## 3. Prerequisites
+
+- **Java Development Kit (JDK)**: Version 21 or higher
+- **Node.js**: Version 18.x or higher
+- **npm**: Version 9.x or higher
+- **Maven**: (Optional; included `mvnw` wrapper can be used)
+
+---
+
+## 4. Getting Started
+
+Run each service in a separate terminal window in the order listed below.
+
+### Step 1: Start IMEI Registry Service (Port 8080)
 
 ```bash
 cd imei-registry
+# On Linux/macOS:
 ./mvnw spring-boot:run
+# On Windows:
+.\mvnw.cmd spring-boot:run
 ```
+
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- H2 Database Console: http://localhost:8080/h2-console
+  - JDBC URL: `jdbc:h2:mem:test`
+  - User: `sa`
+  - Password: *(leave blank)*
+
+### Step 2: Start File Ingestion Service (Port 8081)
 
 ```bash
 cd file-ingestion
+# On Linux/macOS:
 ./mvnw spring-boot:run
+# On Windows:
+.\mvnw.cmd spring-boot:run
 ```
+
+- Swagger UI: http://localhost:8081/swagger-ui.html
+
+### Step 3: Start the Web UI (Port 5173)
 
 ```bash
 cd imei-status-app
 npm install
-cp .env.example .env
 npm run dev
 ```
 
-On Windows, use `mvnw.cmd` instead of `./mvnw`.
+Open your browser to the URL printed by Vite (typically http://localhost:5173).
 
-Open the URL printed by Vite. API docs for the Java services are at:
+---
 
-- http://localhost:8080/swagger-ui.html
-- http://localhost:8081/swagger-ui.html
+## 5. API Reference
 
-The H2 console for the registry is at http://localhost:8080/h2-console (JDBC URL `jdbc:h2:mem:test`, user `sa`, empty password).
+### IMEI Registry Service (`http://localhost:8080`)
 
-## Single IMEI
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/imei/{imei}` | Retrieve full device record by 15-digit IMEI. |
+| `GET` | `/api/v1/imei/{imei}/status` | Retrieve only current status (`Blocked` or `Unblocked`). |
+| `POST` | `/api/v1/imei/block` | Mark device status as `Blocked`. |
+| `POST` | `/api/v1/imei/unblock` | Mark device status as `Unblocked`. |
+| `POST` | `/api/v1/imei/batch` | Process an array of block/unblock actions. |
 
-Look up a 15-digit IMEI on the home page, then block or unblock it.
-
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/v1/imei/{imei}` | Full record |
-| `GET` | `/api/v1/imei/{imei}/status` | Status only |
-| `POST` | `/api/v1/imei/block` | Set status to `Blocked` |
-| `POST` | `/api/v1/imei/unblock` | Set status to `Unblocked` |
-| `POST` | `/api/v1/imei/batch` | Apply a list of block or unblock rows |
-
-A block or unblock body looks like this:
+#### Request Payload (`/api/v1/imei/block` or `/unblock`)
 
 ```json
 {
-  "userName": "Asha",
-  "mobileModel": "Phone X",
+  "userName": "Asha Sharma",
+  "mobileModel": "Galaxy S24 Ultra",
   "imeiNumber": "356938035643809",
-  "telecomCompany": "Demo Telecom",
+  "telecomCompany": "AeroTel 5G",
   "action": "BLOCK"
 }
 ```
 
-`action` is `BLOCK` or `UNBLOCK`. The IMEI must be exactly 15 digits. If the IMEI is new, the registry creates the record. If it already exists, the registry updates the status.
+### File Ingestion Service (`http://localhost:8081`)
 
-## CSV upload
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/file/upload` | Multipart form upload (`file` key) accepting a `.csv` file. |
 
-`POST /api/v1/file/upload` accepts a multipart file named `file`. The first row is the header. Every data row has five columns:
+---
+
+## 6. CSV Format & Sample Testing
+
+A valid CSV file must include the following header and schema:
 
 ```csv
 userName,mobileModel,imeiNumber,telecomCompany,action
-Asha,Phone X,356938035643809,Demo Telecom,BLOCK
-Ravi,Phone Y,490154203237518,Demo Telecom,UNBLOCK
+Asha Sharma,Galaxy S24 Ultra,356938035643809,AeroTel 5G,BLOCK
+Ravi Verma,iPhone 15 Pro,490154203237518,NovaCom,UNBLOCK
 ```
 
-File ingestion checks that each row is complete, the IMEI is 15 digits, and the action is `BLOCK` or `UNBLOCK`. Valid rows are sent to the registry in batches of 10. The response lists how many rows succeeded and why any row failed.
+- **Validation Rules**:
+  - `userName`, `mobileModel`, and `telecomCompany` must not be blank.
+  - `imeiNumber` must be exactly 15 numeric digits.
+  - `action` must be either `BLOCK` or `UNBLOCK` (case-insensitive).
 
-## UI configuration
+Pre-configured sample files are available in the [`sample-data/`](sample-data/) folder:
+- `sample_imei_records.csv`: Full valid set to verify multi-batch processing.
+- `sample_with_validation_errors.csv`: Includes deliberate errors to test error reporting.
 
-`imei-status-app/.env` can override the API addresses. Defaults:
+---
 
-- `VITE_IMEI_API_BASE_URL=http://localhost:8080/api/v1/imei`
-- `VITE_CSV_UPLOAD_ENDPOINT=http://localhost:8081/api/v1/file/upload`
+## 7. Configuration
 
-Restart the Vite dev server after changing `.env`.
+Frontend configuration can be adjusted via `imei-status-app/.env`:
+
+```env
+VITE_IMEI_API_BASE_URL=http://localhost:8080/api/v1/imei
+VITE_CSV_UPLOAD_ENDPOINT=http://localhost:8081/api/v1/file/upload
+```
+
+Backend service properties can be modified in:
+- `imei-registry/src/main/resources/application.properties`
+- `file-ingestion/src/main/resources/application.properties` (e.g. `registry.batch-size=10`)
+
+---
+
+## 8. Repository Structure
+
+```
+Blocking app/
+├── .github/                      # GitHub templates & workflows
+├── file-ingestion/               # Batch file ingestion microservice
+│   ├── src/main/java/org/dep/fileingestion/
+│   │   ├── client/               # HTTP client communicating with registry
+│   │   ├── config/               # Thread pool and RestTemplate configuration
+│   │   ├── controller/           # REST controller for CSV upload
+│   │   ├── dto/                  # Data transfer objects
+│   │   ├── exception/            # Exception handlers
+│   │   └── service/              # CSV parser and data validator
+│   └── pom.xml
+├── imei-registry/                # Core registry microservice
+│   ├── src/main/java/org/dep/imeiregistry/
+│   │   ├── controller/           # Lookup and block/unblock endpoints
+│   │   ├── dto/                  # Request/response DTOs
+│   │   ├── exception/            # Exception handlers
+│   │   ├── model/                # JPA entity with audit hooks
+│   │   ├── repository/           # Spring Data JPA repository
+│   │   └── service/              # Business logic implementation
+│   └── pom.xml
+├── imei-status-app/              # React frontend application
+│   ├── src/
+│   │   ├── components/           # Reusable UI widgets
+│   │   ├── pages/                # Home and Upload pages
+│   │   └── services/             # API integration clients
+│   ├── package.json
+│   └── vite.config.js
+├── sample-data/                  # Test CSV data files
+├── .gitattributes
+├── .gitignore
+├── CONTRIBUTING.md
+└── README.md
+```
+
+---
+
+## 9. License
+
+This repository is distributed under the [MIT License](LICENSE).

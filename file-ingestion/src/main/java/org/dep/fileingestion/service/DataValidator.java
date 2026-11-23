@@ -7,9 +7,12 @@ import java.util.Optional;
 
 @Component
 public class DataValidator {
-//this validates all things in a row
-    public Optional<String> validate(FileRecordDTO dto, int rowNum) {
 
+    /**
+     * Validates an individual CSV row representation.
+     * Returns an Optional containing the error reason if invalid, or empty if valid.
+     */
+    public Optional<String> validate(FileRecordDTO dto, int rowNum) {
         if (dto == null) {
             return Optional.of("Row is empty");
         }
@@ -35,17 +38,12 @@ public class DataValidator {
         }
 
         if (!dto.getImeiNumber().matches("\\d{15}")) {
-            return Optional.of(
-                    "IMEI number must contain exactly 15 digits"
-            );
+            return Optional.of("IMEI number must contain exactly 15 digits");
         }
 
         if (!dto.getAction().equalsIgnoreCase("BLOCK")
                 && !dto.getAction().equalsIgnoreCase("UNBLOCK")) {
-
-            return Optional.of(
-                    "Action must be BLOCK or UNBLOCK"
-            );
+            return Optional.of("Action must be BLOCK or UNBLOCK");
         }
 
         return Optional.empty();

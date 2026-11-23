@@ -5,7 +5,9 @@ import AppHeader from "../components/AppHeader.jsx";
 import { uploadCsvFile } from "../services/fileService.js";
 import { Upload } from "lucide-react";
 
-const API_BASE_URL = "http://localhost:8080/api/v1/imei";
+const API_BASE_URL =
+  import.meta.env.VITE_IMEI_API_BASE_URL ??
+  "http://localhost:8080/api/v1/imei";
 
 export default function UploadPage() {
   const [csvFile, setCsvFile] = useState(null);

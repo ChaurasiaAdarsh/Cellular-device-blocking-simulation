@@ -1,6 +1,5 @@
-package org.dep.imeiRegistory.exception;
+package org.dep.imeiregistry.exception;
 
-//a separate exception that can be thrown
 public class ImeiNotFoundException extends RuntimeException {
 
     public ImeiNotFoundException(String message) {

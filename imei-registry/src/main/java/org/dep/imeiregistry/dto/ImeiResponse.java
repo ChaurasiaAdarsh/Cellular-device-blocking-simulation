@@ -1,12 +1,9 @@
-package org.dep.imeiRegistory.dto;
+package org.dep.imeiregistry.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-
-//its a DTO for the response
 
 @Data
 @NoArgsConstructor

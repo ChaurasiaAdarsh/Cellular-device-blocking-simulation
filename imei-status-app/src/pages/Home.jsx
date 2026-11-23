@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import AppHeader from "../components/AppHeader.jsx";
 import DeviceDetails from "../components/imei/DeviceDetails.jsx";
@@ -20,16 +19,16 @@ export default function Home() {
     setError("");
 
     if (!isValidImei(imei)) {
-      setError("Enter a valid 15-digit IMEI number.");
-      return  window.alert('Enter a valid 15-digit IMEI number.');
+      setError("Please enter a valid 15-digit IMEI number.");
+      return;
     }
 
     setLoading(true);
     try {
-      setRecord(await fetchImeiRecord(imei));
+      const data = await fetchImeiRecord(imei);
+      setRecord(data);
     } catch (err) {
       setError(err.message || "Could not fetch IMEI details.");
-      return  window.alert('Could not fetch IMEI details..');
     } finally {
       setLoading(false);
     }
@@ -45,7 +44,6 @@ export default function Home() {
       setRecord(result.record);
     } catch (err) {
       setError(err.message || "Status could not be updated.");
-      return window.alert('Status could not be updated.')
     } finally {
       setUpdating(false);
     }
